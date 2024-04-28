@@ -1,5 +1,7 @@
 #pragma once
 #include "BaseGame.h"
+#include "vector2f.h"
+
 class Game : public BaseGame
 {
 public:
@@ -23,8 +25,31 @@ public:
 
 private:
 
+	Point2f m_Pos{0,0};
+	Vector2f m_Vel{};
+	Vector2f m_Dir{};
+	float m_Axel{50};
+	float m_MaxSpeed{5};
+	float m_DropOff{30.f};
+
+	float m_Boost{};
+	float m_Boosting{ 25 };
+	float m_BoostDropOff{ 15.f };
+	float m_Sprint{};
+
+	float m_Angle{};
+
+	const float m_Size{ 25 };
+
+
+	std::vector<Point2f> m_Bottom{ Point2f(0,0),Point2f(0,0) };
+	std::vector<Point2f> m_Top{ Point2f(0,0),Point2f(0,0) };
+
 	// FUNCTIONS
 	void Initialize();
 	void Cleanup( );
 	void ClearBackground( ) const;
+
+	void UpdateSpeed(float elepsedSec);
+	void Slash(float elepsedSec);
 };
