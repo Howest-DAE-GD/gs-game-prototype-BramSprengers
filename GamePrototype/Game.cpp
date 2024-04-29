@@ -16,7 +16,11 @@ Game::~Game( )
 
 void Game::Initialize( )
 {
-	
+    m_Top[0] = Point2f(sin(m_Angle) * (m_BladeSize + m_Ofset + m_Size) + m_Pos.x, cos(m_Angle) * (m_BladeSize + m_Ofset + m_Size) + m_Pos.y);
+    m_Bottom[0] = Point2f(sin(m_Angle) * (m_Ofset + m_Size) + m_Pos.x, cos(m_Angle) * (m_Ofset + m_Size) + m_Pos.y);
+
+    m_Top[1] = Point2f(sin(m_Angle) * (m_BladeSize + m_Ofset + m_Size) + m_Pos.x, cos(m_Angle) * (m_BladeSize + m_Ofset + m_Size) + m_Pos.y);
+    m_Bottom[1] = Point2f(sin(m_Angle) * (m_Ofset + m_Size) + m_Pos.x, cos(m_Angle) * (m_Ofset + m_Size) + m_Pos.y);
 }
 
 void Game::Cleanup( )
@@ -67,7 +71,7 @@ void Game::Draw( ) const
 	utils::SetColor(Color4f(1, 0, 0, 1));
 	utils::DrawLine(m_Pos, m_Pos + m_Dir.Normalized() * 25,2);
 
-
+    utils::DrawPolygon(m_Slash);
 }
 
 void Game::ProcessKeyDownEvent( const SDL_KeyboardEvent & e )
@@ -160,64 +164,64 @@ void Game::UpdateSpeed(float elepsedSec)
 
 void Game::Slash(float elepsedSec)
 {
-    float speed{ 10 };
-    float dis{};
-    const float ofset{ 10 };
-    const float bladeSize{ 10 };
+    m_Slash.clear();
 
+    float speed{ 150.f };
+    float dis{ 10.f };
 
-    Point2f up{};
-    Point2f down{};
-
+    float bottomDis{};
+    float topDis{};
             //setup for defoult ponts
-            up = m_Pos;
-            up.y += ofset + bladeSize;
-
-            down = m_Pos;
-            down.y += ofset;
 
                 //making the first part of the list follow the mous
-            m_Top[1] = m_Top[0];
-            m_Bottom[1] = m_Bottom[0];
-
-                m_Top[0] = Point2f(-sin(m_Angle) * up.y + + m_Pos.x, cos(m_Angle) * up.y + m_Pos.y);
-                m_Bottom[0] = Point2f(-sin(m_Angle) * down.y + m_Pos.x, cos(m_Angle) * down.y + m_Pos.y);
+    
 
                 //adding and moving a new point to the list
-                if (Vector2f(m_Top[1] - m_Top[0]).Length() >= dis)
+                if (Vector2f(m_Top[m_Top.size() - 2] - m_Top[m_Top.size() - 1]).Length() >= dis && m_Top.size() < 100)
                 {
+                    std::cout << "adding\n";
                     m_Bottom.push_back(m_Bottom[m_Bottom.size() - 1]);
                     m_Top.push_back(m_Top[m_Top.size() - 1]);
                 }
 
-                if (Vector2f(m_Top[m_Top.size() - 2] - m_Top[m_Top.size() - 1]).Length() >= 0) // calculation for the distance between the last and second last point
-                {
-                    float bottomDis{};
-
-                    for (int i = 1; i < m_Bottom.size() - 1; i++) // calculation of the distance between all points at the bottom
+                    for (int i = 0; i < m_Bottom.size() - 1; i++) // calculation of the distance between all points at the bottom
                     {
                         bottomDis += Vector2f(m_Bottom[i + 1] - m_Bottom[i]).Length();
                     }
-                    m_Bottom[m_Bottom.size() - 1] -= Vector2f(m_Bottom[m_Bottom.size() - 2] - bottom[m_Bottom.size() - 1]).Normalized() * speed * elepsedSec * (bottomDis + m_Bottom.size());
-                    float topDis{};
 
-                    for (int i = 1; i < m_Top.size() - 1; i++) // calculation of the distance between all points at the top
+                    m_Bottom[0] += Vector2f(m_Bottom[1] - m_Bottom[0]).Normalized() * Vector2f(m_Bottom[1] - m_Bottom[0]).Length() * (speed + m_Bottom.size() ) * elepsedSec;
+
+                    for (int i = 0; i < m_Top.size() - 1; i++) // calculation of the distance between all points at the top
                     {
                         topDis += Vector2f(m_Top[i + 1] - m_Top[i]).Length();
                     }
 
-                    m_Top[m_Top.size() - 1] -= Vector2f(m_Top[m_Top.size() - 2] - m_Top[m_Top.size() - 1]).Normalized() * speed * elepsedSec * (bottomDis + m_Top.size());
-                }
+                    m_Top[0] += Vector2f(m_Top[1] - m_Top[0]).Normalized() * Vector2f(m_Top[1] - m_Top[0]).Length() * (speed + m_Top.size() ) * elepsedSec;
 
                 //remoeving the last one if the list is bigger than 2
                 if (m_Bottom.size() > 2)
                 {
-                    if (Vector2f(m_Bottom[m_Bottom.size() - 2] - m_Bottom[m_Bottom.size() - 1]).Length() <= 0.001f)
+                    std::cout << "deleting\n";
+                    if (Vector2f(m_Bottom[0] - m_Bottom[1]).Length() <= 0.01f || Vector2f(m_Bottom[0] - m_Bottom[1]).Length() >= 1000.f )
                     {
-                        m_Bottom.pop_back();
-                        m_Top.pop_back();
+                        m_Bottom.erase(m_Bottom.begin());
+                        m_Top.erase(m_Top.begin());
                     }
                 }
+
+                m_Top[m_Top.size() - 1] = Point2f(sin(m_Angle) * (m_BladeSize + m_Ofset + m_Size) + m_Pos.x, cos(m_Angle) * (m_BladeSize + m_Ofset + m_Size) + m_Pos.y);
+                m_Bottom[m_Bottom.size() - 1] = Point2f(sin(m_Angle) * (m_Ofset + m_Size) + m_Pos.x, cos(m_Angle) * (m_Ofset + m_Size) + m_Pos.y);
+
+                for (int i{}; i < m_Bottom.size(); i++)
+                {
+                    m_Slash.push_back(m_Bottom[i]);
+                }
+                for (int i{ int(m_Top.size() -1) }; i >= 0; i--)
+                {
+                    m_Slash.push_back(m_Top[i]);
+                }
+
+                std::cout << Vector2f(m_Bottom[m_Bottom.size() - 1] - m_Bottom[m_Bottom.size() - 2]) << std::endl;
 
                 // prep for the vertacies
                 //vertices = new Vector3[top.Count + bottom.Count];
