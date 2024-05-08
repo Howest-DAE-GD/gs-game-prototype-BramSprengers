@@ -26,13 +26,26 @@ public:
 
 private:
 
-	struct Enem
+	struct BusSawEnem
 	{
 		Point2f pos;
 		Vector2f vel{ 0,0 };
 		Vector2f dir{ 0,0 };
 		float angle{ 0 };
 		bool gotHit{ false };
+		float size{ 25 };
+	};
+
+	struct SawEnem
+	{
+		Point2f pos;
+		Vector2f vel{ 0,0 };
+		Vector2f dir{ 0,0 };
+		bool LookAtPlayer{ false };
+		bool gotHit{ false };
+		float angle{ 0 };
+		std::vector<Point2f> box{};
+		float size{ 75 };
 	};
 
 	
@@ -73,7 +86,12 @@ private:
 
 	float m_stunTimer{};
 
-	std::vector<Enem> m_enemey{};
+	float m_oselator{};
+
+	bool m_switch{};
+
+	std::vector<BusSawEnem> m_BusSaw{};
+	std::vector<SawEnem> m_SawEnem{};
 
 	// FUNCTIONS
 	void Initialize();
@@ -83,5 +101,6 @@ private:
 	void UpdateAngel(float elepsedSec);
 	void UpdateSpeed(float elepsedSec);
 	void Slash(float elepsedSec);
-	void UpdateEnem(float elepsedSec);
+	void UpdateBuzSawEnem(float elepsedSec);
+	void UpdateSawEnem(float elepsedSec);
 };
