@@ -30,7 +30,7 @@ void BaseGame::InitializeGameEngine()
 #endif
 
 	// Initialize SDL
-	if (SDL_Init(SDL_INIT_VIDEO /*| SDL_INIT_AUDIO*/) < 0)
+	if (SDL_Init(SDL_INIT_VIDEO /*| SDL_INIT_AUDIO*/ | SDL_INIT_GAMECONTROLLER) < 0)
 	{
 		std::cerr << "BaseGame::Initialize( ), error when calling SDL_Init: " << SDL_GetError() << std::endl;
 		return;
@@ -171,6 +171,33 @@ void BaseGame::Run()
 				e.button.y = int(m_Window.height) - e.button.y;
 				this->ProcessMouseUpEvent(e.button);
 				break;
+			case SDL_CONTROLLERDEVICEADDED:
+			{
+				int joystickIndex = e.cdevice.which;
+				if (SDL_IsGameController(joystickIndex)) {
+					SDL_GameController* controller = SDL_GameControllerOpen(joystickIndex);
+					if (controller) {
+						std::cout << "Opened controller: " << SDL_GameControllerName(controller) << std::endl;
+					}
+					else {
+						std::cout << "Could not open game controller: " << SDL_GetError() << std::endl;
+					}
+				}
+			}
+			break;
+
+			case SDL_CONTROLLERBUTTONDOWN:
+				HandleControllerButton(e, SDL_KEYDOWN);
+				break;
+			case SDL_CONTROLLERBUTTONUP:
+				HandleControllerButton(e, SDL_KEYUP);
+				break;
+
+			case SDL_CONTROLLERAXISMOTION:
+				HandleControlerRightStick(e);
+				HandleControlerLeftStick(e);
+				HandleControlerTrigger(e);
+				break;
 			}
 		}
 
@@ -198,6 +225,19 @@ void BaseGame::Run()
 			SDL_GL_SwapWindow(m_pWindow);
 		}
 	}
+}
+
+void BaseGame::SendKeyEvent(SDL_Scancode scanCode, Uint32 type)
+{
+
+	SDL_Event event;
+	SDL_zero(event);
+	event.type = type;
+	event.key.keysym.scancode = scanCode;
+	event.key.keysym.sym = SDL_GetKeyFromScancode(scanCode);
+	event.key.state = (type == SDL_KEYDOWN) ? SDL_PRESSED : SDL_RELEASED;
+	SDL_PushEvent(&event);
+
 }
 
 void BaseGame::CleanupGameEngine()

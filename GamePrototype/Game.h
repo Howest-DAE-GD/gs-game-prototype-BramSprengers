@@ -2,12 +2,14 @@
 #include "BaseGame.h"
 #include "vector2f.h"
 #include "texture.h"
+#include "BaseGame.h"
 #include <vector>
 
 enum GameState
 {
 	start,
 	play,
+	hint,
 	death
 };
 
@@ -31,6 +33,10 @@ public:
 	void ProcessMouseMotionEvent( const SDL_MouseMotionEvent& e ) override;
 	void ProcessMouseDownEvent( const SDL_MouseButtonEvent& e ) override;
 	void ProcessMouseUpEvent( const SDL_MouseButtonEvent& e ) override;
+	void HandleControllerButton(const SDL_Event& e,const SDL_EventType& events) override;
+	void HandleControlerLeftStick(const SDL_Event& e) override;
+	void HandleControlerRightStick(const SDL_Event& e) override;
+	void HandleControlerTrigger(const SDL_Event& e) override;
 
 private:
 
@@ -64,17 +70,25 @@ private:
 		bool gotHit{ false };
 		bool isBoosting{ false };
 		bool isPoweringup{ false };
+		bool overlaping{ false };
 		float cooldownTimer{};
-		float poweringupTimer{};
+		float poweringupTimer{ (rand() % 10) / -10.f };
 		float cooldown{ 2.f };
-		float poweringup{ 5.f };
-		float angle{ 0 };
+		float poweringup{ rand() % 5 + 5.f};
+		float angle{ float((rand() % 360) / 180.f * M_PI) };
 		float size{ 100 };
 	};
-	
+
+	bool m_controllerImputing{ false };
+
 	Point2f m_Pos{1000,1000};
 	Vector2f m_Vel{};
 	Vector2f m_Dir{};
+
+	int AXIS_DEADZONE{ 2000 };
+
+	float m_maxX{ 32767.f };
+	float m_maxY{ 32767.f };
 
 	float m_Axel{50};
 	float m_MaxSpeed{5};
@@ -91,7 +105,7 @@ private:
 	float m_OldAngle{};
 	float m_NewAngle{};
 
-	const float m_Size{ 25 };
+	const float m_Size{ 40 };
 	const float m_EnemSize{ 25 };
 
 	bool m_SpaceHold{};
@@ -121,6 +135,14 @@ private:
 	Texture* m_pScore{};
 	Texture* m_pTitle{};
 	Texture* m_pStart{};
+	Texture* m_pHintButton{};
+	Texture* m_pMoevement{};
+	Texture* m_pSlashing{};
+	Texture* m_pDodge{};
+	Texture* m_pSurvived{};
+	Texture* m_pFool{};
+
+	std::string m_Poler{""};
 
 	std::vector<BusSawEnem> m_BusSaw{};
 	std::vector<SawEnem> m_SawEnem{};

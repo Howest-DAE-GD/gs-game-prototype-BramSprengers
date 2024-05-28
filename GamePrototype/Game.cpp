@@ -2,6 +2,7 @@
 #include "Game.h"
 #include "utils.h"
 #include <iostream>
+#include <string>
 #include "Camera.h"
 
 Game::Game( const Window& window ) 
@@ -17,7 +18,10 @@ Game::~Game( )
 
 void Game::Initialize( )
 {
+
 	m_pScore = new Texture(std::string("HIGHSCORE: " + std::to_string(m_HighScore)), "upheavtt.ttf", 18 * 3, Color4f(1, 1, 1, 1));
+
+	m_pSurvived = new Texture(std::string("waves survived: " + std::to_string(m_Wave)), "upheavtt.ttf", 18 * 3, Color4f(1, 1, 1, 1));
 
 	m_pText = new Texture(std::string("wave: " + std::to_string(m_Wave)), "upheavtt.ttf", m_FontSize, Color4f(1, 1, 1, 1));
 
@@ -25,7 +29,13 @@ void Game::Initialize( )
 
 	m_pStart = new Texture(std::string("press ENTER to start."), "upheavtt.ttf", 18 * 3, Color4f(1, 1, 1, 1));
 
+	m_pHintButton = new Texture(std::string("when in game press P to open/close the hint menu."), "upheavtt.ttf", 18 * 3, Color4f(1, 1, 1, 1));
 
+	m_pMoevement = new Texture(std::string("w/a/s/d (z/q/s/d) to move."), "upheavtt.ttf", 18 * 3, Color4f(1, 1, 1, 1));
+	m_pSlashing = new Texture(std::string("move the mous to slash."), "upheavtt.ttf", 18 * 3, Color4f(1, 1, 1, 1));
+	m_pDodge = new Texture(std::string("space to dodge."), "upheavtt.ttf", 18 * 3, Color4f(1, 1, 1, 1));
+
+	m_pFool = new Texture(std::string("you fool i am a polerbear!!!"), "upheavtt.ttf", 18, Color4f(1, 1, 1, 1));
 
     m_Top[0] = Point2f(sin(m_OldAngle) * (m_BladeSize + m_Ofset + m_Size) + m_Pos.x, cos(m_OldAngle) * (m_BladeSize + m_Ofset + m_Size) + m_Pos.y);
     m_Bottom[0] = Point2f(sin(m_OldAngle) * (m_Ofset + m_Size) + m_Pos.x, cos(m_OldAngle) * (m_Ofset + m_Size) + m_Pos.y);
@@ -58,27 +68,31 @@ void Game::Cleanup( )
 	m_pStart = nullptr;
 	delete m_pTitle;
 	m_pText = nullptr;
+	delete m_pMoevement;
+	m_pMoevement = nullptr;
+	delete m_pSlashing;
+	m_pSlashing = nullptr;
+	delete m_pDodge;
+	m_pDodge = nullptr;
+	delete m_pSurvived;
+	m_pSurvived = nullptr;
+	delete m_pHintButton;
+	m_pHintButton = nullptr;
+	delete m_pFool;
+	m_pFool = nullptr;
 }
 
 void Game::Update( float elapsedSec )
 {
 	const Uint8* keys{ SDL_GetKeyboardState(nullptr) };
 
-	switch (m_State)
+	if(m_State == play)
 	{
-	case start:
-
-		if (keys[SDL_SCANCODE_RETURN])
+		if (!m_controllerImputing)
 		{
-			m_State = play;
+			m_Dir.x = 0;
+			m_Dir.y = 0;
 		}
-
-		break;
-	case play:
-
-	{
-		m_Dir.x = 0;
-		m_Dir.y = 0;
 
 		if (keys[SDL_SCANCODE_W]) m_Dir.y = 1;
 
@@ -98,6 +112,19 @@ void Game::Update( float elapsedSec )
 			m_SpaceHold = true;
 		}
 		else m_SpaceHold = false;
+
+		if (keys[SDL_SCANCODE_LSHIFT])
+		{
+			if (!m_SpaceHold && m_DashTimer <= 0)
+			{
+				m_Boost = m_Dir * m_Boosting;
+				m_DashTimer = 1;
+			}
+			m_SpaceHold = true;
+		}
+		else m_SpaceHold = false;
+
+
 
 		if (m_DashTimer > 0) m_DashTimer -= elapsedSec;
 
@@ -149,6 +176,7 @@ void Game::Update( float elapsedSec )
 			
 			m_Pos = Point2f(m_Floor.left + m_Floor.width * 0.5f, m_Floor.bottom + m_Floor.height * 0.5f);
 			m_Vel = Vector2f(0, 0);
+			m_Boost = Vector2f(0, 0);
 
 			m_Top.clear();
 			m_Bottom.clear();
@@ -167,6 +195,10 @@ void Game::Update( float elapsedSec )
 				delete m_pScore;
 				m_pScore = new Texture(std::string("HIGHSCORE: " + std::to_string(m_HighScore)), "upheavtt.ttf", 18 * 3, Color4f(1, 1, 1, 1));
 			}
+
+			delete m_pSurvived;
+			m_pSurvived = new Texture(std::string("waves survived: " + std::to_string(m_Wave)), "upheavtt.ttf", 18 * 3, Color4f(1, 1, 1, 1));
+
 			m_Wave = 0;
 
 			m_State = death;
@@ -199,22 +231,7 @@ void Game::Update( float elapsedSec )
 
 			UpdateText();
 		}
-	}
-
-		break;
-	case death:
-
-		if (keys[SDL_SCANCODE_RETURN])
-		{
-			m_State = play;
-		}
-
-		break;
-	default:
-		break;
-	}
-
-	
+	}	
 }
 
 void Game::Draw( ) const
@@ -228,9 +245,11 @@ void Game::Draw( ) const
 	{
 		m_pTitle->Draw(Point2f(GetViewPort().width * 0.5f - m_pTitle->GetWidth() * 0.5f, GetViewPort().height * 0.5f + m_pTitle->GetHeight() * 2));
 		m_pStart->Draw(Point2f(GetViewPort().width * 0.5f - m_pStart->GetWidth() * 0.5f, GetViewPort().height * 0.5f - m_pStart->GetHeight() * 2));
+		m_pHintButton->Draw(Point2f(GetViewPort().width * 0.5f - m_pHintButton->GetWidth() * 0.5f, GetViewPort().height * 0.5f - m_pStart->GetHeight() * 2 - m_pHintButton->GetHeight() * 2));
 	}
 
 		break;
+	case hint:
 	case play:
 
 	{
@@ -245,7 +264,7 @@ void Game::Draw( ) const
 
 		Light(m_Floor.left + m_Floor.width * 0.5f, m_Floor.bottom + m_Floor.height * 0.5f, Color4f(0.65f, 0.5f, 0.6f, 0.75f), Color4f(0.75f,0.5f,0.55f,0));
 
-		Light(m_Pos, Color4f(0.75f, 0.f, 0.75f, 0.25f), Color4f(0.65f, 0.f, 0.75f, 0.75f));
+		Light(m_Pos, Color4f(0.75f, 0.75f, 0.75f, 0.25f), Color4f(0.65f, 0.f, 0.75f, 0.75f));
 
 		for (int i = 0; i < m_BusSaw.size() && i <= 3; i++)
 		{
@@ -259,32 +278,51 @@ void Game::Draw( ) const
 
 		for (int i = 0; i < m_FistEnem.size() && i <= 3; i++)
 		{
-			Light(m_FistEnem[i].pos, Color4f(0.75f, 0.75f, 0.25f, 0.3f), Color4f(0.55f, 0.55f, 0.55f, 0.8f));
+			Light(m_FistEnem[i].pos, Color4f(1.f - m_FistEnem[i].poweringupTimer / m_FistEnem[i].poweringup, float(m_FistEnem[i].isBoosting), 0.f, 0.3f - (m_FistEnem[i].poweringupTimer / m_FistEnem[i].poweringup) * 0.5f), Color4f(0.55f, 0.55f, 0.55f, 0.8f));
 		}
 
-		const float angOfset{ 210 };
+		const float angOfset{ 140.f / 180.f * M_PI };
 
 		const Point2f p1{ m_Pos.x + sinf(m_NewAngle) * m_Size,m_Pos.y + cosf(m_NewAngle) * m_Size };
 		const Point2f p2{ m_Pos.x + sinf(m_NewAngle + angOfset) * m_Size, m_Pos.y + cosf(m_NewAngle + angOfset) * m_Size };
 		const Point2f p3{ m_Pos.x + sinf(m_NewAngle - angOfset) * m_Size, m_Pos.y + cosf(m_NewAngle - angOfset) * m_Size };
 
-		utils::SetColor(Color4f(1 - m_DashTimer, 0, 1.f, 1.f));
-		utils::FillTriangle(p1, p2, p3);
+		const Point2f eyeL{ p2 + Vector2f(p1 - p2) * 0.7f };
+		const Point2f eyeR{ p3 + Vector2f(p1 - p3) * 0.7f };
+		const Point2f tail{ p3 + Vector2f(p2 - p3) * 0.5f };
+
+		if(m_Poler == "poler")
+		{
+			utils::SetColor(Color4f(1 - m_DashTimer * 0.5f, 1 - m_DashTimer * 0.5f, 1 - m_DashTimer * 0.5f, 1.f));
+			utils::FillTriangle(p1, p2, p3);
+			utils::FillEllipse(tail, 15, 15);
+
+			utils::SetColor(Color4f(0,0,0,1));
+			utils::FillEllipse(eyeL,5,5);
+			utils::FillEllipse(eyeR, 5, 5);
+		}
+		else
+		{
+			utils::SetColor(Color4f(1 - m_DashTimer, 0, 1.f, 1.f));
+			utils::FillTriangle(p1, p2, p3);
+		}
+
 
 		//utils::DrawLine(m_Pos, Point2f(GetViewPort().width * 0.5f, GetViewPort().height * 0.5f), 
 			//Vector2f(m_Pos - Point2f(GetViewPort().width * 0.5f , GetViewPort().height * 0.5f)).Length() * 0.01f);
 
 		utils::SetColor(Color4f(0, 1, 0, 1));
-		utils::DrawLine(m_Pos, m_Pos + m_Vel * 25, 2);
-		for (int i{}; i < m_BusSaw.size(); ++i) utils::DrawLine(m_BusSaw[i].pos, m_BusSaw[i].pos + m_BusSaw[i].vel * 25);
+		//utils::DrawLine(m_Pos, m_Pos + m_Vel * 25, 2);
+		//for (int i{}; i < m_BusSaw.size(); ++i) utils::DrawLine(m_BusSaw[i].pos, m_BusSaw[i].pos + m_BusSaw[i].vel * 25);
 
 		utils::SetColor(Color4f(1, 0, 0, 1));
-		utils::DrawLine(m_Pos, m_Pos + m_Dir.Normalized() * 25, 2);
+		//utils::DrawLine(m_Pos, m_Pos + m_Dir.Normalized() * 25, 2);
 
-		utils::SetColor(Color4f(1, 1, 1, 1));
+		
 
 		for (int i = 0; i < ((m_Slash.size()) / 2); i++)
 		{
+			utils::SetColor(Color4f(1, 1, 1, i / float(m_Slash.size())));
 			std::vector<Point2f> box{ m_Slash[i],m_Slash[i + 1], m_Slash[m_Slash.size() - i - 2],m_Slash[m_Slash.size() - i - 1] };
 			utils::FillPolygon(box);
 		}
@@ -379,7 +417,7 @@ void Game::Draw( ) const
 
 			glPopMatrix();
 
-			utils::DrawLine(m_FistEnem[i].pos, m_FistEnem[i].pos + m_FistEnem[i].dir * 100);
+			//utils::DrawLine(m_FistEnem[i].pos, m_FistEnem[i].pos + m_FistEnem[i].dir * 100);
 		}
 
 		camera.Reset();
@@ -392,11 +430,30 @@ void Game::Draw( ) const
 		m_pText->Draw(Point2f(margin, GetViewPort().height - m_pText->GetHeight() - margin));
 	}
 
+	if (m_State == hint)
+	{
+		utils::SetColor(Color4f(0, 0, 0, 0.5f));
+		utils::FillRect(GetViewPort());
+
+		m_pMoevement->Draw(Point2f(GetViewPort().width * 0.5f - m_pMoevement->GetWidth() * 0.5f, GetViewPort().height * 0.5f + m_pMoevement->GetHeight() * 2));
+		m_pSlashing->Draw(Point2f(GetViewPort().width * 0.5f - m_pSlashing->GetWidth() * 0.5f, GetViewPort().height * 0.5f));
+		m_pDodge->Draw(Point2f(GetViewPort().width * 0.5f - m_pDodge->GetWidth() * 0.5f, GetViewPort().height * 0.5f - m_pDodge->GetHeight() * 2));
+
+		m_pHintButton->Draw(Point2f(GetViewPort().width * 0.5f - m_pHintButton->GetWidth() * 0.5f, GetViewPort().height * 0.5f - m_pDodge->GetHeight() * 2 - m_pHintButton->GetHeight() * 4));
+
+		if (m_Poler == "poler")
+		{
+			m_pFool->Draw();
+		}
+	}
+
 		break;
 	case death:
 
 		m_pScore->Draw(Point2f(GetViewPort().width * 0.5f - m_pScore->GetWidth() * 0.5f, GetViewPort().height * 0.5f + m_pScore->GetHeight() * 2));
-		m_pStart->Draw(Point2f(GetViewPort().width * 0.5f - m_pStart->GetWidth() * 0.5f, GetViewPort().height * 0.5f - m_pStart->GetHeight() * 2));
+		m_pSurvived->Draw(Point2f(GetViewPort().width * 0.5f - m_pSurvived->GetWidth() * 0.5f, GetViewPort().height * 0.5f));
+
+		m_pStart->Draw(Point2f(GetViewPort().width * 0.5f - m_pStart->GetWidth() * 0.5f, GetViewPort().height * 0.5f - m_pStart->GetHeight() * 4));
 
 		break;
 	default:
@@ -406,6 +463,52 @@ void Game::Draw( ) const
 
 void Game::ProcessKeyDownEvent( const SDL_KeyboardEvent & e )
 {
+	if (e.keysym.sym == SDLK_p)
+	{
+		if (m_State == hint)
+		{
+			m_State = play;
+		}
+		else
+		{
+			m_State = hint;
+		}
+	}
+
+
+	if (e.keysym.sym == SDLK_RETURN)
+	{
+		m_State = play;
+	}
+
+
+	if(m_Poler != "poler")
+	{
+		if (e.keysym.sym == SDLK_p && m_Poler == "")
+		{
+			m_Poler += 'p';
+		}
+		else if (e.keysym.sym == SDLK_o && m_Poler == "p")
+		{
+			m_Poler += 'o';
+		}
+		else if (e.keysym.sym == SDLK_l && m_Poler == "po")
+		{
+			m_Poler += 'l';
+		}
+		else if (e.keysym.sym == SDLK_e && m_Poler == "pol")
+		{
+			m_Poler += 'e';
+		}
+		else if (e.keysym.sym == SDLK_r && m_Poler == "pole")
+		{
+			m_Poler += 'r';
+		}
+		else m_Poler = "";
+	}
+
+	std::cout << m_Poler << std::endl;
+
 	if (e.keysym.sym == SDLK_KP_PLUS)
 	{
 		BusSawEnem test{ Point2f(float(rand() % int(m_Floor.width - m_Floor.left) + m_Floor.left), float(rand() % int(m_Floor.height - m_Floor.bottom) + m_Floor.bottom)) };
@@ -488,6 +591,156 @@ void Game::ProcessMouseUpEvent( const SDL_MouseButtonEvent& e )
 	//}
 }
 
+void Game::HandleControllerButton(const SDL_Event& e, const SDL_EventType& events)
+{
+	//SDL_GameController* controller = SDL_GameControllerFromInstanceID(e.caxis.which);
+
+	//SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_START);
+
+
+	if(events == SDL_KEYDOWN)
+	{
+		if (e.cbutton.button == SDL_CONTROLLER_BUTTON_START)
+		{
+			if (m_State != play) m_State = play;
+			else m_State = hint;
+		}
+
+		if (e.cbutton.button == SDL_CONTROLLER_BUTTON_BACK)
+		{
+			if (m_State != hint) m_State = hint;
+			else m_State = play;
+		}
+
+		if (e.cbutton.button == SDL_CONTROLLER_BUTTON_RIGHTSHOULDER)
+		{
+				if (!m_SpaceHold && m_DashTimer <= 0)
+				{
+					m_Boost = -Vector2f((GetViewPort().width * 0.5f) - m_MouseP.x, (GetViewPort().height * 0.5f) - m_MouseP.y).Normalized() * m_Boosting;
+					m_DashTimer = 1;
+				}
+				m_SpaceHold = true;
+		} 
+		else m_SpaceHold = false;
+
+		if (e.cbutton.button == SDL_CONTROLLER_BUTTON_LEFTSHOULDER)
+		{
+			if (!m_SpaceHold && m_DashTimer <= 0)
+			{
+				m_Boost = m_Dir.Normalized() * m_Boosting;
+				m_DashTimer = 1;
+			}
+			m_SpaceHold = true;
+		}
+		else m_SpaceHold = false;
+	}
+}
+
+void Game::HandleControlerLeftStick(const SDL_Event& e)
+{
+	SDL_GameController* controller = SDL_GameControllerFromInstanceID(e.caxis.which);
+
+	//m_controllerImputing = false;
+
+	int rx{};
+	if (e.caxis.axis == SDL_CONTROLLER_AXIS_LEFTX)
+	{
+		rx = SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_LEFTX);
+		//if (abs(rx) > AXIS_DEADZONE)
+		{
+			m_Dir.x = rx / m_maxX;
+		}
+		if (abs(rx) > AXIS_DEADZONE) m_controllerImputing = true;
+		//std::cout << "LEFT Axis Motion: X=" << m_Dir.x << std::endl;
+	}
+
+
+	int ry{};
+	if (e.caxis.axis == SDL_CONTROLLER_AXIS_LEFTY)
+	{
+		ry = SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_LEFTY);
+		//if (abs(ry) > AXIS_DEADZONE)
+		{
+			m_Dir.y = -ry / m_maxY;
+		}
+		if (abs(ry) > AXIS_DEADZONE) m_controllerImputing = true;
+		//std::cout << "LEFT Axis Motion: Y=" << y << std::endl;
+	}
+
+	if (m_Dir.x < 0.1f && m_Dir.x > -0.1f) m_Dir.x = 0;
+	if (m_Dir.y < 0.1f && m_Dir.y > -0.1f) m_Dir.y = 0;
+
+	std::cout << "LEFT Axis Motion: X=" << m_Dir.x << std::endl;
+	std::cout << "LEFT Axis Motion: Y=" << m_Dir.y << std::endl;
+
+	//m_Dir = m_Dir.Normalized();
+}
+
+void Game::HandleControlerRightStick(const SDL_Event& e)
+{
+	SDL_GameController* controller = SDL_GameControllerFromInstanceID(e.caxis.which);
+
+	int lx{};
+	if (e.caxis.axis == SDL_CONTROLLER_AXIS_RIGHTX)
+	{
+		lx = SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_RIGHTX);
+		if (abs(lx) > AXIS_DEADZONE * 2)
+		{
+			m_MouseP.x = lx;
+		}
+		std::cout << "Right Axis Motion: X=" << lx << std::endl;
+	}
+
+	int ly{};
+	if (e.caxis.axis == SDL_CONTROLLER_AXIS_RIGHTY)
+	{
+		ly = SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_RIGHTY);
+		if (abs(ly) > AXIS_DEADZONE * 2)
+		{
+			m_MouseP.y = -ly;
+		}
+		//std::cout << "Right Axis Motion: Y=" << y << std::endl;
+	}
+}
+
+void Game::HandleControlerTrigger(const SDL_Event& e)
+{
+	SDL_GameController* controller = SDL_GameControllerFromInstanceID(e.caxis.which);
+
+	int lt{};
+	if (e.caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT)
+	{
+		lt = SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_TRIGGERLEFT);
+		if (abs(lt) > 32760)
+		{
+				if (!m_SpaceHold && m_DashTimer <= 0)
+				{
+					m_Boost = m_Dir.Normalized() * m_Boosting;
+					m_DashTimer = 1;
+				}
+				m_SpaceHold = true;
+		}
+		else m_SpaceHold = false;
+	}
+
+	int rt{};
+	if (e.caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT)
+	{
+		rt = SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
+		if (abs(rt) > 32760)
+		{
+			if (!m_SpaceHold && m_DashTimer <= 0)
+			
+			{
+					m_Boost = -Vector2f((GetViewPort().width * 0.5f) - m_MouseP.x, (GetViewPort().height * 0.5f) - m_MouseP.y).Normalized() * m_Boosting;
+					m_DashTimer = 1;
+			}
+			m_SpaceHold = true;
+		}
+	}
+	else m_SpaceHold = false;
+}
+
 void Game::ClearBackground( ) const
 {
 	glClearColor( 0.15f, 0.15f, 0.15f, 1.0f );
@@ -516,8 +769,8 @@ void Game::UpdateSpeed(float elepsedSec)
 
 	if (m_stunTimer <= 0)
 	{
-		Vector2f nDir{};
-		if (m_Dir.x != 0 || m_Dir.y != 0) nDir = m_Dir.Normalized();
+		Vector2f nDir{ m_Dir };
+		//if (m_Dir.x != 0 || m_Dir.y != 0) nDir = m_Dir.Normalized();
 
 		if (m_Boost.Length() > m_Axel) 
 		{
@@ -556,6 +809,7 @@ void Game::Slash(float elepsedSec)
 
     float speed{ 50.f };
     float dis{ 0.01f };
+	float maxSpeed{ 1000.f };
 
                 //adding and moving a new point to the list
                 if (Vector2f(m_Top[m_Top.size() - 2] - m_Top[m_Top.size() - 1]).Length() >= dis)
@@ -570,14 +824,32 @@ void Game::Slash(float elepsedSec)
                         m_BottomDis += Vector2f(m_Bottom[i + 1] - m_Bottom[i]).Length();
                     }
 
-                    m_Bottom[0] += Vector2f(m_Bottom[1] - m_Bottom[0]).Normalized() * ((speed + m_Bottom.size()) * Vector2f(m_Bottom[1] - m_Bottom[0]).Length()) * elepsedSec;
+					if (((speed + m_Bottom.size()) * Vector2f(m_Bottom[1] - m_Bottom[0]).Length()) <= maxSpeed)
+					{
+						m_Bottom[0] += Vector2f(m_Bottom[1] - m_Bottom[0]).Normalized() * ((speed + m_Bottom.size()) * Vector2f(m_Bottom[1] - m_Bottom[0]).Length()) * elepsedSec;
+						std::cout << (speed + m_Bottom.size()) * Vector2f(m_Bottom[1] - m_Bottom[0]).Length() << std::endl;
+					}
+					else 
+					{
+						m_Bottom[0] += Vector2f(m_Bottom[1] - m_Bottom[0]).Normalized() * maxSpeed * elepsedSec;
+						std::cout << maxSpeed << std::endl;
+					}
+
+					
 
                     for (int i = 0; i < m_Top.size() - 1; i++) // calculation of the distance between all points at the top
                     {
                         m_TopDis += Vector2f(m_Top[i + 1] - m_Top[i]).Length();
                     }
 
-                    m_Top[0] += Vector2f(m_Top[1] - m_Top[0]).Normalized() * ((speed + m_Top.size()) * Vector2f(m_Top[1] - m_Top[0]).Length()) * elepsedSec;
+					if (((speed + m_Top.size()) * Vector2f(m_Top[1] - m_Top[0]).Length()) <= maxSpeed) 
+					{
+						m_Top[0] += Vector2f(m_Top[1] - m_Top[0]).Normalized() * ((speed + m_Top.size()) * Vector2f(m_Top[1] - m_Top[0]).Length()) * elepsedSec;
+					}
+					else 
+					{
+						m_Top[0] += Vector2f(m_Top[1] - m_Top[0]).Normalized() * maxSpeed * elepsedSec;
+					}
 
                 //remoeving the last one if the list is bigger than 2
                 if (m_Bottom.size() > 2)
@@ -764,16 +1036,16 @@ void Game::UpdateSawEnem(float elepsedSec)
 			m_stunTimer = 0.5f;
 		}
 
+		std::vector<Point2f> line1{ m_SawEnem[i].box[0],m_SawEnem[i].box[1] };
+		std::vector<Point2f> line2{ m_SawEnem[i].box[2],m_SawEnem[i].box[3] };
+		std::vector<Point2f> line3{ m_SawEnem[i].box[0],m_SawEnem[i].box[3] };
+		std::vector<Point2f> line4{ m_SawEnem[i].box[1],m_SawEnem[i].box[2] };
+
 		for (int j = 0; j < m_Top.size(); j++)
 		{
 			utils::HitInfo info{};
 
-			std::vector<Point2f> line1{ m_SawEnem[i].box[0],m_SawEnem[i].box[1] };
-			std::vector<Point2f> line2{ m_SawEnem[i].box[2],m_SawEnem[i].box[3] };
-			std::vector<Point2f> line3{ m_SawEnem[i].box[0],m_SawEnem[i].box[3] };
-			std::vector<Point2f> line4{ m_SawEnem[i].box[1],m_SawEnem[i].box[2] };
-
-			if (utils::Raycast(line1, m_Bottom[j], m_Top[j], info) || utils::Raycast(line2, m_Bottom[j], m_Top[j], info)) // good hit
+			if (utils::Raycast(line1, m_Bottom[j], m_Top[j], info) || utils::Raycast(line2, m_Bottom[j], m_Top[j], info) && !m_SawEnem[i].gotHit) // good hit
 			{
 				//m_Vel = dirToPlayer * maxPushSpeed * elepsedSec;
 				m_SawEnem[i].gotHit = true;
@@ -783,7 +1055,7 @@ void Game::UpdateSawEnem(float elepsedSec)
 					m_SawEnem[i].vel = m_SawEnem[i].vel.Normalized() * maxPushSpeed * 2;
 				}
 			}
-			else if (utils::Raycast(line3, m_Bottom[j], m_Top[j], info) || utils::Raycast(line4, m_Bottom[j], m_Top[j], info)) // bad hit
+			else if (utils::Raycast(line3, m_Bottom[j], m_Top[j], info) || utils::Raycast(line4, m_Bottom[j], m_Top[j], info) && !m_SawEnem[i].gotHit) // bad hit
 			{
 				m_stunTimer = 0.25f;
 				m_SawEnem[i].vel = -dirToPlayer.Normalized() * pushback * (m_TopDis + m_BottomDis) * 0.25f * elepsedSec;
@@ -827,7 +1099,7 @@ void Game::UpdateFistEnem(float elepsedSec)
 	const float maxSpeed{ 1000.f };
 	const float speedDropOff{ 50.f };
 	const float pushback{ 20.f };
-	const float maxPushSpeed{ 5.f };
+	const float maxPushSpeed{ 20.f };
 
 	Circlef playerHitbox{ m_Pos,m_Size * 0.5f};
 
@@ -839,7 +1111,7 @@ void Game::UpdateFistEnem(float elepsedSec)
 		if (m_FistEnem[i].isBoosting)
 		{
 			m_FistEnem[i].pos += m_FistEnem[i].vel * elepsedSec;
-			if(!m_FistEnem[i].gotHit) m_FistEnem[i].vel -= m_FistEnem[i].vel.Normalized() * (speedDropOff + (Vector2f(Point2f(m_Floor.left + m_Floor.width * 0.5f, m_Floor.bottom + m_Floor.height * 0.5f) - m_FistEnem[i].pos).Length() * 0.8f)) * elepsedSec;
+			if(!m_FistEnem[i].gotHit) m_FistEnem[i].vel -= m_FistEnem[i].vel.Normalized() * (speedDropOff + (Vector2f(Point2f(m_Floor.left + m_Floor.width * 0.5f, m_Floor.bottom + m_Floor.height * 0.5f) - m_FistEnem[i].pos).Length() * 0.9f)) * elepsedSec;
 			else m_FistEnem[i].vel -= m_FistEnem[i].vel.Normalized() * (speedDropOff + (Vector2f(Point2f(m_Floor.left + m_Floor.width * 0.5f, m_Floor.bottom + m_Floor.height * 0.5f) - m_FistEnem[i].pos).Length() * 0.25f)) * elepsedSec;
 
 			if (m_FistEnem[i].vel.Length() <= 5)
@@ -853,24 +1125,34 @@ void Game::UpdateFistEnem(float elepsedSec)
 			if (utils::IsOverlapping(enemHitbox, playerHitbox))
 			{
 				m_stunTimer = 0.5f;
-				m_Vel = dirToPlayer.Normalized() * m_FistEnem[i].vel.Length() * elepsedSec * 1.5f;
+				m_Vel = dirToPlayer.Normalized() * m_FistEnem[i].vel.Length() * elepsedSec * 2.5f;
 				m_FistEnem[i].vel = -dirToPlayer.Normalized() * m_FistEnem[i].vel.Length() * 0.75f;
 
+				if (m_Vel.Length() >= maxPushSpeed)
+				{
+					m_Vel = m_Vel.Normalized() * maxPushSpeed * elepsedSec;
+				}
 
 				Vector2f up{ 0,1 };
 
 				m_FistEnem[i].angle = -dirToPlayer.Normalized().AngleWith(up);
 			}
 
-			if (utils::IsOverlapping(m_Slash, enemHitbox) && m_Slash.size() >= 6)
+			if (utils::IsOverlapping(m_Slash, enemHitbox) && m_Slash.size() >= 6 && !m_FistEnem[i].overlaping)
 			{
 				m_FistEnem[i].gotHit = true;
-				m_Vel = dirToPlayer.Normalized() * m_FistEnem[i].vel.Length() * elepsedSec * 1.5f;
+				m_Vel = dirToPlayer.Normalized() * m_FistEnem[i].vel.Length() * 1.5f;
 				m_FistEnem[i].vel = -dirToPlayer.Normalized() * m_FistEnem[i].vel.Length() * 0.80f;
 
 				Vector2f up{ 0,1 };
 
 				m_FistEnem[i].angle = -dirToPlayer.Normalized().AngleWith(up);
+				m_FistEnem[i].overlaping = true;
+			}
+
+			if (!utils::IsOverlapping(m_Slash, enemHitbox))
+			{
+				m_FistEnem[i].overlaping = false;
 			}
 
 			for (int j = 0; j < m_BusSaw.size(); j++)
@@ -885,7 +1167,7 @@ void Game::UpdateFistEnem(float elepsedSec)
 					m_BusSaw[j].vel = -dirWithEnem * pushback * 0.5f * elepsedSec;
 					std::cout << m_BusSaw[j].vel.Length();
 
-					m_FistEnem[i].vel += dirWithEnem.Normalized() * m_FistEnem[i].vel.Length() * 0.2f * elepsedSec;
+					m_FistEnem[i].vel = dirWithEnem.Normalized() * m_FistEnem[i].vel.Length() * 0.9f;
 
 					m_FistEnem[i].angle = -dirToPlayer.Normalized().AngleWith(dirWithEnem.Normalized());
 				}
@@ -963,7 +1245,7 @@ void Game::UpdateFistEnem(float elepsedSec)
 
 
 
-					m_FistEnem[i].angle += -dirToPlayer.Normalized().AngleWith(up) * 0.1f * elepsedSec;
+					m_FistEnem[i].angle += -dirToPlayer.Normalized().AngleWith(up) * 0.5f * elepsedSec;
 				}
 			}
 			else
@@ -1023,13 +1305,13 @@ void Game::Light(const Point2f& target, Color4f baseColor, Color4f falloff) cons
 	const int sizeW{ 25 };
 	const int sizeH{ 25 };
 
+	const float width{ m_Floor.width / float(sizeW) };
+	const float height{ m_Floor.height / float(sizeH) };
+
 	for (int x = 0; x < sizeW; x++)
 	{
 		for (int y = 0; y < sizeH; y++)
 		{
-			const float width{ m_Floor.width / float(sizeW) };
-			const float height{ m_Floor.height / float(sizeH) };
-
 			const Rectf block{ m_Floor.left + width * x, m_Floor.bottom + height * y, width, height };
 
 			utils::SetColor(Color4f(

@@ -16,6 +16,8 @@ public:
 
 	void Run( );
 
+	void SendKeyEvent(SDL_Scancode scanCode, Uint32 type);
+
 	virtual void Update(float elapsedSec)
 	{
 		
@@ -45,6 +47,25 @@ public:
 	virtual void ProcessMouseUpEvent(const SDL_MouseButtonEvent& e)
 	{
 		
+	}
+
+	virtual void HandleControllerButton(const SDL_Event& e, const SDL_EventType& SDL_KEYDOWN)
+	{
+
+	}
+
+	virtual void HandleControlerLeftStick(const SDL_Event& e)
+	{
+
+	}
+
+	virtual void HandleControlerRightStick(const SDL_Event& e)
+	{
+
+	}
+	virtual void HandleControlerTrigger(const SDL_Event& e)
+	{
+
 	}
 
 	const Rectf& GetViewPort() const
