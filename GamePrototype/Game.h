@@ -110,6 +110,11 @@ private:
 
 	bool m_SpaceHold{};
 
+	static const int m_LightX{ 50 };
+	static const int m_LightY{ m_LightX };
+
+	std::vector<Color4f> m_LightCollor;
+
 	std::vector<Point2f> m_Bottom{ Point2f(0,0),Point2f(0,0) };
 	std::vector<Point2f> m_Top{ Point2f(0,0),Point2f(0,0) };
 	std::vector<Point2f> m_Slash{};
@@ -164,8 +169,12 @@ private:
 	void UpdateSawEnem(float elepsedSec);
 	void UpdateFistEnem(float elepsedSec);
 
-	void Light(const Point2f& target, Color4f baseColor, Color4f falloff) const;
-	void Light(float x, float y, Color4f baseColor, Color4f falloff) const;
+	void LightCal(int x, int y, std::vector<Color4f>& light, const Point2f& target,const Color4f& baseColor,const Color4f& falloff);
+	void DrawFloor(int x, int y,const std::vector<Color4f>& light) const;
+	void ResetLight(int x, int y, std::vector<Color4f>& light, const Point2f& target, Color4f baseColor, Color4f falloff);
+
+	void Light(const Point2f& target,const Color4f& baseColor,const Color4f& falloff) const;
+	void Light(float x, float y,const Color4f& baseColor,const Color4f& falloff) const;
 
 	void UpdateText();
 };

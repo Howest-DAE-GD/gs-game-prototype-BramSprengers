@@ -18,6 +18,7 @@ Game::~Game( )
 
 void Game::Initialize( )
 {
+	m_LightCollor.reserve(m_LightX * m_LightY);
 
 	m_pScore = new Texture(std::string("HIGHSCORE: " + std::to_string(m_HighScore)), "upheavtt.ttf", 18 * 3, Color4f(1, 1, 1, 1));
 
@@ -88,6 +89,8 @@ void Game::Update( float elapsedSec )
 
 	if(m_State == play)
 	{
+		ResetLight(m_LightX,m_LightY,m_LightCollor,Point2f(m_Floor.left + m_Floor.width * 0.5f, m_Floor.bottom + m_Floor.height * 0.5f), Color4f(0.65f, 0.5f, 0.6f, 0.75f), Color4f(0.75f, 0.5f, 0.55f, 0));
+
 		if (!m_controllerImputing)
 		{
 			m_Dir.x = 0;
@@ -236,6 +239,9 @@ void Game::Update( float elapsedSec )
 
 void Game::Draw( ) const
 {
+	Color4f gray{ 0.25f,0.25f,0.25f,1 };
+	Color4f lightGray{ 0.75f,0.75f,0.75f,1 };
+
 	ClearBackground( );
 
 	switch (m_State)
@@ -262,7 +268,7 @@ void Game::Draw( ) const
 
 		utils::SetColor(Color4f(0.15f, 0.125f, 0.125f, 1.f));
 
-		Light(m_Floor.left + m_Floor.width * 0.5f, m_Floor.bottom + m_Floor.height * 0.5f, Color4f(0.65f, 0.5f, 0.6f, 0.75f), Color4f(0.75f,0.5f,0.55f,0));
+		/*Light(m_Floor.left + m_Floor.width * 0.5f, m_Floor.bottom + m_Floor.height * 0.5f, Color4f(0.65f, 0.5f, 0.6f, 0.75f), Color4f(0.75f,0.5f,0.55f,0));
 
 		Light(m_Pos, Color4f(0.75f, 0.75f, 0.75f, 0.25f), Color4f(0.65f, 0.f, 0.75f, 0.75f));
 
@@ -279,7 +285,9 @@ void Game::Draw( ) const
 		for (int i = 0; i < m_FistEnem.size() && i <= 3; i++)
 		{
 			Light(m_FistEnem[i].pos, Color4f(1.f - m_FistEnem[i].poweringupTimer / m_FistEnem[i].poweringup, float(m_FistEnem[i].isBoosting), 0.f, 0.3f - (m_FistEnem[i].poweringupTimer / m_FistEnem[i].poweringup) * 0.5f), Color4f(0.55f, 0.55f, 0.55f, 0.8f));
-		}
+		}*/
+
+		DrawFloor(m_LightX, m_LightY, m_LightCollor);
 
 		const float angOfset{ 140.f / 180.f * M_PI };
 
@@ -320,16 +328,30 @@ void Game::Draw( ) const
 
 		
 
-		for (int i = 0; i < ((m_Slash.size()) / 2); i++)
+		for (int i = 0; i < ((m_Slash.size()) * 0.5f); i++)
 		{
-			utils::SetColor(Color4f(1, 1, 1, i / float(m_Slash.size())));
+			utils::SetColor(Color4f(1, 1, 1, i / float(m_Slash.size() * 0.5f)));
 			std::vector<Point2f> box{ m_Slash[i],m_Slash[i + 1], m_Slash[m_Slash.size() - i - 2],m_Slash[m_Slash.size() - i - 1] };
 			utils::FillPolygon(box);
 		}
 
+		utils::SetColor(lightGray);
+
+		glPushMatrix();
+
+		glTranslatef(m_Bottom[m_Bottom.size() - 1].x, m_Bottom[m_Bottom.size() - 1].y,0);
+		glRotatef(m_OldAngle / M_PI * 180, 0, 0, -1);
+		glTranslatef(-15 * 0.5f, 0, 0);
+
+		utils::FillRect(0,0, 15, Vector2f(m_Bottom[m_Bottom.size() - 1] - m_Top[m_Bottom.size() - 1]).Length());
+		
+		glPopMatrix();
+
+		utils::FillEllipse(m_Top[m_Bottom.size() - 1], 15, 15);
+
+		utils::SetColor(gray);
+		utils::FillEllipse(m_Top[m_Bottom.size() - 1], 10, 10);
 		//utils::DrawPolygon(m_Slash,false);
-		Color4f gray{ 0.25f,0.25f,0.25f,1 };
-		Color4f lightGray{ 0.75f,0.75f,0.75f,1 };
 
 		const float boxSize{ 50 };
 		int tieth{ 3 };
@@ -1099,7 +1121,7 @@ void Game::UpdateFistEnem(float elepsedSec)
 	const float maxSpeed{ 1000.f };
 	const float speedDropOff{ 50.f };
 	const float pushback{ 20.f };
-	const float maxPushSpeed{ 20.f };
+	const float maxPushSpeed{ 10.f };
 
 	Circlef playerHitbox{ m_Pos,m_Size * 0.5f};
 
@@ -1130,7 +1152,7 @@ void Game::UpdateFistEnem(float elepsedSec)
 
 				if (m_Vel.Length() >= maxPushSpeed)
 				{
-					m_Vel = m_Vel.Normalized() * maxPushSpeed * elepsedSec;
+					m_Vel = m_Vel.Normalized() * maxPushSpeed;
 				}
 
 				Vector2f up{ 0,1 };
@@ -1142,7 +1164,7 @@ void Game::UpdateFistEnem(float elepsedSec)
 			{
 				m_FistEnem[i].gotHit = true;
 				m_Vel = dirToPlayer.Normalized() * m_FistEnem[i].vel.Length() * 1.5f;
-				m_FistEnem[i].vel = -dirToPlayer.Normalized() * m_FistEnem[i].vel.Length() * 0.80f;
+				m_FistEnem[i].vel = -dirToPlayer.Normalized() * m_FistEnem[i].vel.Length() * 1.2f;
 
 				Vector2f up{ 0,1 };
 
@@ -1300,7 +1322,95 @@ void Game::UpdateFistEnem(float elepsedSec)
 	}
 }
 
-void Game::Light(const Point2f& target, Color4f baseColor, Color4f falloff) const
+void Game::LightCal(int x, int y, std::vector<Color4f>& light, const Point2f& target,const Color4f& baseColor,const Color4f& falloff)
+{
+
+	const float width{ m_Floor.width / float(x) };
+	const float height{ m_Floor.height / float(y) };
+
+	for (int posX = 0; posX < x; posX++)
+	{
+		for (int posY = 0; posY < y; posY++)
+		{
+			const Rectf block{ m_Floor.left + width * posX, m_Floor.bottom + height * posY, width, height };
+
+			Color4f color
+			{
+				 baseColor.r - ((Vector2f(0, (block.bottom - target.y) / m_Floor.height).Length() + Vector2f((block.left - target.x) / m_Floor.width, 0).Length()) * falloff.r),
+				 baseColor.g - ((Vector2f(0, (block.bottom - target.y) / m_Floor.height).Length() + Vector2f((block.left - target.x) / m_Floor.width, 0).Length()) * falloff.g),
+				 baseColor.b - ((Vector2f(0, (block.bottom - target.y) / m_Floor.height).Length() + Vector2f((block.left - target.x) / m_Floor.width, 0).Length()) * falloff.b),
+				 baseColor.a - ((Vector2f(0, (block.bottom - target.y) / m_Floor.height).Length() + Vector2f((block.left - target.x) / m_Floor.width, 0).Length()) * falloff.a)
+			};
+
+			light[posX + posY * x].r += (color.r + color.r * color.a) * 0.5f;
+			light[posX + posY * x].g += (color.g + color.g * color.a) * 0.5f;
+			light[posX + posY * x].b += (color.b + color.b * color.a) * 0.5f;
+		}
+	}
+}
+
+void Game::DrawFloor(int x, int y,const std::vector<Color4f>& light) const
+{
+	const float width{ m_Floor.width / float(x) };
+	const float height{ m_Floor.height / float(y) };
+
+	for (int posX = 0; posX < x; posX++)
+	{
+		for (int posY = 0; posY < y; posY++)
+		{
+			const Rectf block{ m_Floor.left + width * posX, m_Floor.bottom + height * posY, width, height };
+
+			utils::SetColor(light[posX + posY * x]);
+
+			utils::FillRect(block);
+		}
+	}
+}
+
+void Game::ResetLight(int x, int y, std::vector<Color4f>& light, const Point2f& target, Color4f baseColor, Color4f falloff)
+{
+	const float width{ m_Floor.width / float(x) };
+	const float height{ m_Floor.height / float(y) };
+
+	light.clear();
+
+	for (int posX = 0; posX < x; posX++)
+	{
+		for (int posY = 0; posY < y; posY++)
+		{
+			const Rectf block{ m_Floor.left + width * posX, m_Floor.bottom + height * posY, width, height };
+
+			Color4f color
+			{
+				 baseColor.r - ((Vector2f(0, (block.bottom - target.y) / m_Floor.height).Length() + Vector2f((block.left - target.x) / m_Floor.width, 0).Length()) * falloff.r),
+				 baseColor.g - ((Vector2f(0, (block.bottom - target.y) / m_Floor.height).Length() + Vector2f((block.left - target.x) / m_Floor.width, 0).Length()) * falloff.g),
+				 baseColor.b - ((Vector2f(0, (block.bottom - target.y) / m_Floor.height).Length() + Vector2f((block.left - target.x) / m_Floor.width, 0).Length()) * falloff.b),
+				 baseColor.a - ((Vector2f(0, (block.bottom - target.y) / m_Floor.height).Length() + Vector2f((block.left - target.x) / m_Floor.width, 0).Length()) * falloff.a)
+			};
+
+			light.push_back(Color4f(color.r * color.a * 0.125f, color.g * color.a * 0.125f, color.b * color.a * 0.125f,1));
+		}
+	}
+
+	LightCal(x,y,light,m_Pos, Color4f(0.75f, 0.75f, 0.75f, 0.25f), Color4f(0.65f, 0.f, 0.75f, 0.75f));
+
+	for (int i = 0; i < m_BusSaw.size() && i <= 3; i++)
+	{
+		LightCal(x, y, light, m_BusSaw[i].pos, Color4f(0.75f, 0.25f, 0.25f, 0.1f), Color4f(0.55f, 0.55f, 0.55f, 0.9f));
+	}
+
+	for (int i = 0; i < m_SawEnem.size() && i <= 3; i++)
+	{
+		LightCal(x, y, light, m_SawEnem[i].pos, Color4f(0.25f, 0.55f, 0.75f, 0.1f), Color4f(0.55f, 0.55f, 0.55f, 0.9f));
+	}
+
+	for (int i = 0; i < m_FistEnem.size() && i <= 3; i++)
+	{
+		LightCal(x, y, light, m_FistEnem[i].pos, Color4f(1.f - m_FistEnem[i].poweringupTimer / m_FistEnem[i].poweringup, float(m_FistEnem[i].isBoosting) * 0.5f, 0.f, 0.3f - (m_FistEnem[i].poweringupTimer / m_FistEnem[i].poweringup) * 0.5f), Color4f(0.55f, 0.55f, 0.55f, 0.4f));
+	}
+}
+
+void Game::Light(const Point2f& target,const Color4f& baseColor,const Color4f& falloff) const
 {
 	const int sizeW{ 25 };
 	const int sizeH{ 25 };
@@ -1326,7 +1436,7 @@ void Game::Light(const Point2f& target, Color4f baseColor, Color4f falloff) cons
 	}
 }
 
-void Game::Light(float x, float y, Color4f baseColor, Color4f falloff) const
+void Game::Light(float x, float y,const Color4f& baseColor,const Color4f& falloff) const
 {
 	Light(Point2f(x, y), baseColor, falloff);
 }
