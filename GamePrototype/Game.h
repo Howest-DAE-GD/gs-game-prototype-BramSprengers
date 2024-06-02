@@ -147,6 +147,8 @@ private:
 	Texture* m_pSurvived{};
 	Texture* m_pFool{};
 
+	Texture* m_pControls{};
+
 	std::string m_Poler{""};
 
 	std::vector<BusSawEnem> m_BusSaw{};

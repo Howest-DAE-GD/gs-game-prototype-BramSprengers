@@ -28,15 +28,17 @@ void Game::Initialize( )
 
 	m_pTitle = new Texture(std::string("SLASH & BASH" + std::to_string(m_HighScore)), "upheavtt.ttf", 18 * 5, Color4f(1, 1, 1, 1));
 
-	m_pStart = new Texture(std::string("press ENTER to start."), "upheavtt.ttf", 18 * 3, Color4f(1, 1, 1, 1));
+	m_pStart = new Texture(std::string("press ENTER or start to start."), "upheavtt.ttf", 18 * 3, Color4f(1, 1, 1, 1));
 
-	m_pHintButton = new Texture(std::string("when in game press P to open/close the hint menu."), "upheavtt.ttf", 18 * 3, Color4f(1, 1, 1, 1));
+	m_pHintButton = new Texture(std::string("when in game press P or the \"option\" to open/close the hint menu."), "upheavtt.ttf", 18 * 2, Color4f(1, 1, 1, 1));
 
 	m_pMoevement = new Texture(std::string("w/a/s/d (z/q/s/d) to move."), "upheavtt.ttf", 18 * 3, Color4f(1, 1, 1, 1));
 	m_pSlashing = new Texture(std::string("move the mous to slash."), "upheavtt.ttf", 18 * 3, Color4f(1, 1, 1, 1));
 	m_pDodge = new Texture(std::string("space to dodge."), "upheavtt.ttf", 18 * 3, Color4f(1, 1, 1, 1));
 
 	m_pFool = new Texture(std::string("you fool i am a polerbear!!!"), "upheavtt.ttf", 18, Color4f(1, 1, 1, 1));
+
+	m_pControls = new Texture("test.png");
 
     m_Top[0] = Point2f(sin(m_OldAngle) * (m_BladeSize + m_Ofset + m_Size) + m_Pos.x, cos(m_OldAngle) * (m_BladeSize + m_Ofset + m_Size) + m_Pos.y);
     m_Bottom[0] = Point2f(sin(m_OldAngle) * (m_Ofset + m_Size) + m_Pos.x, cos(m_OldAngle) * (m_Ofset + m_Size) + m_Pos.y);
@@ -57,6 +59,15 @@ void Game::Initialize( )
 	//	FistEnem test{ Point2f(float(rand() % int(m_Floor.width - m_Floor.left) + m_Floor.left), float(rand() % int(m_Floor.height - m_Floor.bottom) + m_Floor.bottom)) };
 	//	m_FistEnem.push_back(test);
 	//}
+	UpdateAngel(0);
+	UpdateSpeed(0);
+
+	Slash(0);
+	UpdateBuzSawEnem(0);
+	UpdateSawEnem(0);
+	UpdateFistEnem(0);
+
+	ResetLight(m_LightX, m_LightY, m_LightCollor, Point2f(m_Floor.left + m_Floor.width * 0.5f, m_Floor.bottom + m_Floor.height * 0.5f), Color4f(0.65f, 0.5f, 0.6f, 0.75f), Color4f(0.75f, 0.5f, 0.55f, 0));
 }
 
 void Game::Cleanup( )
@@ -89,8 +100,6 @@ void Game::Update( float elapsedSec )
 
 	if(m_State == play)
 	{
-		ResetLight(m_LightX,m_LightY,m_LightCollor,Point2f(m_Floor.left + m_Floor.width * 0.5f, m_Floor.bottom + m_Floor.height * 0.5f), Color4f(0.65f, 0.5f, 0.6f, 0.75f), Color4f(0.75f, 0.5f, 0.55f, 0));
-
 		if (!m_controllerImputing)
 		{
 			m_Dir.x = 0;
@@ -234,6 +243,8 @@ void Game::Update( float elapsedSec )
 
 			UpdateText();
 		}
+
+		ResetLight(m_LightX, m_LightY, m_LightCollor, Point2f(m_Floor.left + m_Floor.width * 0.5f, m_Floor.bottom + m_Floor.height * 0.5f), Color4f(0.65f, 0.5f, 0.6f, 0.75f), Color4f(0.75f, 0.5f, 0.55f, 0));
 	}	
 }
 
@@ -319,11 +330,11 @@ void Game::Draw( ) const
 		//utils::DrawLine(m_Pos, Point2f(GetViewPort().width * 0.5f, GetViewPort().height * 0.5f), 
 			//Vector2f(m_Pos - Point2f(GetViewPort().width * 0.5f , GetViewPort().height * 0.5f)).Length() * 0.01f);
 
-		utils::SetColor(Color4f(0, 1, 0, 1));
+		//utils::SetColor(Color4f(0, 1, 0, 1));
 		//utils::DrawLine(m_Pos, m_Pos + m_Vel * 25, 2);
 		//for (int i{}; i < m_BusSaw.size(); ++i) utils::DrawLine(m_BusSaw[i].pos, m_BusSaw[i].pos + m_BusSaw[i].vel * 25);
 
-		utils::SetColor(Color4f(1, 0, 0, 1));
+		//utils::SetColor(Color4f(1, 0, 0, 1));
 		//utils::DrawLine(m_Pos, m_Pos + m_Dir.Normalized() * 25, 2);
 
 		
@@ -457,9 +468,13 @@ void Game::Draw( ) const
 		utils::SetColor(Color4f(0, 0, 0, 0.5f));
 		utils::FillRect(GetViewPort());
 
-		m_pMoevement->Draw(Point2f(GetViewPort().width * 0.5f - m_pMoevement->GetWidth() * 0.5f, GetViewPort().height * 0.5f + m_pMoevement->GetHeight() * 2));
+		/*m_pMoevement->Draw(Point2f(GetViewPort().width * 0.5f - m_pMoevement->GetWidth() * 0.5f, GetViewPort().height * 0.5f + m_pMoevement->GetHeight() * 2));
 		m_pSlashing->Draw(Point2f(GetViewPort().width * 0.5f - m_pSlashing->GetWidth() * 0.5f, GetViewPort().height * 0.5f));
-		m_pDodge->Draw(Point2f(GetViewPort().width * 0.5f - m_pDodge->GetWidth() * 0.5f, GetViewPort().height * 0.5f - m_pDodge->GetHeight() * 2));
+		m_pDodge->Draw(Point2f(GetViewPort().width * 0.5f - m_pDodge->GetWidth() * 0.5f, GetViewPort().height * 0.5f - m_pDodge->GetHeight() * 2));*/
+		const float scaler{ 5 };
+
+		m_pControls->Draw(Rectf(GetViewPort().width * 0.5f - m_pControls->GetWidth() * scaler * 0.5f, GetViewPort().height * 0.5f - m_pControls->GetHeight() * scaler * 0.5f,
+			m_pControls->GetWidth() * scaler, m_pControls->GetHeight() * scaler));
 
 		m_pHintButton->Draw(Point2f(GetViewPort().width * 0.5f - m_pHintButton->GetWidth() * 0.5f, GetViewPort().height * 0.5f - m_pDodge->GetHeight() * 2 - m_pHintButton->GetHeight() * 4));
 
@@ -692,8 +707,8 @@ void Game::HandleControlerLeftStick(const SDL_Event& e)
 	if (m_Dir.x < 0.1f && m_Dir.x > -0.1f) m_Dir.x = 0;
 	if (m_Dir.y < 0.1f && m_Dir.y > -0.1f) m_Dir.y = 0;
 
-	std::cout << "LEFT Axis Motion: X=" << m_Dir.x << std::endl;
-	std::cout << "LEFT Axis Motion: Y=" << m_Dir.y << std::endl;
+	//std::cout << "LEFT Axis Motion: X=" << m_Dir.x << std::endl;
+	//std::cout << "LEFT Axis Motion: Y=" << m_Dir.y << std::endl;
 
 	//m_Dir = m_Dir.Normalized();
 }
@@ -710,7 +725,7 @@ void Game::HandleControlerRightStick(const SDL_Event& e)
 		{
 			m_MouseP.x = lx;
 		}
-		std::cout << "Right Axis Motion: X=" << lx << std::endl;
+		//std::cout << "Right Axis Motion: X=" << lx << std::endl;
 	}
 
 	int ly{};
@@ -1354,9 +1369,9 @@ void Game::DrawFloor(int x, int y,const std::vector<Color4f>& light) const
 	const float width{ m_Floor.width / float(x) };
 	const float height{ m_Floor.height / float(y) };
 
-	for (int posX = 0; posX < x; posX++)
+	for (int posX = 0; posX < x && light.size() >= x * y; posX++)
 	{
-		for (int posY = 0; posY < y; posY++)
+		for (int posY = 0; posY < y && light.size() >= x * y; posY++)
 		{
 			const Rectf block{ m_Floor.left + width * posX, m_Floor.bottom + height * posY, width, height };
 
